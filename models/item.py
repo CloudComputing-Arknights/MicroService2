@@ -18,7 +18,6 @@ class ConditionType(str, Enum):
 
 
 class CategoryType(str, Enum):
-    # TODO: Should also be a data model?
     FURNITURE = "FURNITURE"
 
 
@@ -48,13 +47,12 @@ class ItemBase(BaseModel):
         ge=0,
         description="Price of the item must be greater than 0."
     )
-    # TODO: Should also be a data model?
-    location: Optional[str] = Field(
+    address_UUID: Optional[UUID] = Field(
         None,
-        description="The position for transaction, can be online or a physical place."
+        description="The UUID of position for transaction chosen from user's address lists, can be online or a physical place, "
     )
     image_urls: List[str] = Field(
-        default_factory=List,
+        default_factory=list,
         description="The list of URL images of the post"
     )
 
@@ -70,7 +68,7 @@ class ItemBase(BaseModel):
                     ],
                     "transaction_type": "SALE",
                     "price": 200.00,
-                    "location": "400W 113th St",
+                    "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
                         "http://example.com/image1.jpg",
                     ]
@@ -82,10 +80,14 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     """Creation payload for an item and its post."""
+    user_UUID: Optional[UUID] = Field(
+        None,
+    )
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
+                    "user_UUID": "99999999-9999-4999-8999-999999999999",
                     "title": "Sofa",
                     "description": "Brown sofa.",
                     "condition": "LIKE_NEW",
@@ -94,7 +96,7 @@ class ItemCreate(ItemBase):
                     ],
                     "transaction_type": "SALE",
                     "price": 200.00,
-                    "location": "400W 113th St",
+                    "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
                         "http://example.com/image1.jpg",
                     ]
@@ -131,12 +133,12 @@ class ItemUpdate(BaseModel):
         ge=0,
         description="Price of the item must be greater than 0."
     )
-    location: Optional[str] = Field(
+    address_UUID: Optional[UUID] = Field(
         None,
         description="The position for transaction, can be online or a physical place."
     )
     image_urls: Optional[List[str]] = Field(
-        default_factory=List,
+        default_factory=list,
         description="The list of URL images of the post"
     )
 
@@ -176,7 +178,7 @@ class ItemRead(ItemBase):
                     ],
                     "transaction_type": "SALE",
                     "price": 200.00,
-                    "location": "400 W 113th St",
+                    "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
                         "http://example.com/image1.jpg",
                     ],
