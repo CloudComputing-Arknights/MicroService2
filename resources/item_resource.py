@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, Header
 from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
 from typing import List, Optional
+from datetime import datetime
 
 from framework.database import get_db
 from services.ItemDataService import get_item_service, ItemDataService
@@ -50,6 +51,7 @@ def list_items(
 @router.get("/{item_id}", response_model=ItemRead)
 def get_item(
         item_id: UUID,
+        response: Response,
         db: Session = Depends(get_db),
         item_service: ItemDataService = Depends(get_item_service)
 ):
@@ -60,6 +62,10 @@ def get_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Item not found"
         )
+    # Add ETag to header of response
+    etag_value = item.updated_at.isoformat()    # timestamp -> ISO string
+    response.headers["ETag"] = f'"{etag_value}"'
+
     return item
 
 
@@ -67,26 +73,31 @@ def get_item(
 def update_item(
         item_id: UUID,
         item_update: ItemUpdate,
+        response: Response,
+        if_match: str = Header(...),    # return 422 if missing Header
         db: Session = Depends(get_db),
         item_service: ItemDataService = Depends(get_item_service)
 ):
     """Partially update an item's information."""
-    # Check if the row exists
-    db_item = item_service.get(db=db, id_=item_id)
-    if not db_item:
+    # Parse ETag
+    try:
+        raw_etag_value = if_match.strip('"')
+        expected_updated_at = datetime.fromisoformat(raw_etag_value)    # ISO string -> datetime
+    except (ValueError, TypeError):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Item not found"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid If-Match header format. Expected an ISO 8601 timestamp string."
         )
+    updated_item = item_service.update_with_lock(
+        db=db,
+        item_id=item_id,
+        item_update=item_update,
+        expected_updated_at=expected_updated_at
+    )
+    # If successfully updated, return ETag using new "updated_at"
+    new_etag_value = updated_item.updated_at.isoformat()
+    response.headers["ETag"] = f'"{new_etag_value}"'
 
-    # Check permissions
-    # if db_item.user_UUID != current_user_id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Not authorized to update this item"
-    #     )
-
-    updated_item = item_service.update(db=db, db_obj=db_item, obj_in=item_update)
     return updated_item
 
 
