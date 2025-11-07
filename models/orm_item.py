@@ -40,6 +40,7 @@ class GUID(TypeDecorator):
 # ----- Item Model -----
 class Item(Base):
     __tablename__ = "items"
+
     item_UUID = Column(GUID(), primary_key=True, default=uuid.uuid4)
     user_UUID = Column(GUID(), nullable=False)
     # user_UUID = Column(GUID(), ForeignKey("users.user_UUID"), nullable=False)
