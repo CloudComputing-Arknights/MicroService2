@@ -80,14 +80,10 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     """Creation payload for an item and its post."""
-    user_UUID: Optional[UUID] = Field(
-        None,
-    )
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "user_UUID": "99999999-9999-4999-8999-999999999999",
                     "title": "Sofa",
                     "description": "Brown sofa.",
                     "condition": "LIKE_NEW",
@@ -150,11 +146,6 @@ class ItemRead(ItemBase):
         description="Server-generated item ID",
         json_schema_extra={"example": "99999999-9999-4999-8999-999999999999"},
     )
-    user_UUID: UUID = Field(
-        ...,
-        description="Server-generated user ID",
-        json_schema_extra={"example": "99999999-9999-4999-8999-999999999999"},
-    )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         description="Creation timestamp (UTC).",
@@ -183,7 +174,6 @@ class ItemRead(ItemBase):
                         "http://example.com/image1.jpg",
                     ],
                     "item_UUID": "99999999-9999-4999-8999-999999999999",
-                    "user_UUID": "99999999-9999-4999-8999-999999999998",
                     "created_at": "2025-02-20T11:22:33Z",
                     "updated_at": "2025-02-21T13:00:00Z",
                 }

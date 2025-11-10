@@ -14,7 +14,6 @@ from models.job import JobRead, JobStatus
 def run_item_creation_task(
         job_id: UUID,
         item_in_dict: dict,
-        user_uuid: UUID
 ):
     """Create an item asynchronously"""
     db = SessionLocal()
@@ -30,7 +29,7 @@ def run_item_creation_task(
         )
         # Create the item
         item_in_obj = ItemCreate(**item_in_dict)
-        new_item = item_service.create(db=db, obj_in=item_in_obj, user_UUID=user_uuid)
+        new_item = item_service.create(db=db, obj_in=item_in_obj)
 
         job_service.update_job_status(
             db,
@@ -69,7 +68,7 @@ router = APIRouter(
 #     item = item_service.create(db=db, obj_in=item_in, user_UUID=item_in.user_UUID)
 #     return item
 
-
+# ======================================== job endpoint ========================================
 @router.post("/", response_model=JobRead, status_code=202)
 def create_item(
         item_in: ItemCreate,
@@ -89,7 +88,6 @@ def create_item(
         run_item_creation_task,
         job_id=job_id,
         item_in_dict=item_in.model_dump(),
-        user_uuid=item_in.user_UUID
     )
 
     # Set Location in Header for client to check status of the job
@@ -123,9 +121,10 @@ def get_job_status(
 
     return job
 
-
+# ======================================== Item Endpoint ========================================
 @router.get("/", response_model=List[ItemRead])
 def list_items(
+        ids: Optional[List[UUID]] = Query(None, description="Filter by a list of item IDs", alias="id"),
         category: Optional[CategoryType] = Query(None, description="Filter by item's category"),
         transaction_type: Optional[TransactionType] = Query(None, description="Filter by item's transaction type"),
         skip: int = 0,
@@ -138,6 +137,7 @@ def list_items(
     """
     items = item_service.get_multi_filtered(
         db=db,
+        ids=ids,
         category=category,
         transaction_type=transaction_type,
         skip=skip,
@@ -165,7 +165,6 @@ def get_item(
     response.headers["ETag"] = f'"{etag_value}"'
 
     return item
-
 
 @router.patch("/{item_id}", response_model=ItemRead)
 def update_item(
@@ -214,12 +213,5 @@ def delete_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Item not found"
         )
-
-    # Check permissions
-    # if db_item.user_UUID != current_user_id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Not authorized to delete this item"
-    #     )
     item_service.delete(db=db, id_=item_id)
     return

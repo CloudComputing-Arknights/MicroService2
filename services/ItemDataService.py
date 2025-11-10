@@ -14,10 +14,32 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
     def __init__(self):
         super().__init__(model=Item)
 
+    # def get_multi_filtered(
+    #         self,
+    #         db: Session,
+    #         *,
+    #         category: Optional[CategoryType] = None,
+    #         transaction_type: Optional[TransactionType] = None,
+    #         skip: int = 0,
+    #         limit: int = 100
+    # ) -> List[Item]:
+    #     """
+    #     Get filtered and paginated items.
+    #     """
+    #     query = db.query(self.model)
+    #
+    #     if transaction_type:
+    #         query = query.filter(self.model.transaction_type == transaction_type)
+    #     if category:
+    #         query = query.filter(self.model.category.contains(category))
+    #     # Apply pagination
+    #     return query.offset(skip).limit(limit).all()
+
     def get_multi_filtered(
             self,
             db: Session,
             *,
+            ids: Optional[List[uuid.UUID]] = None,
             category: Optional[CategoryType] = None,
             transaction_type: Optional[TransactionType] = None,
             skip: int = 0,
@@ -28,6 +50,8 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
         """
         query = db.query(self.model)
 
+        if ids:
+            query = query.filter(self.model.item_UUID.in_(ids))
         if transaction_type:
             query = query.filter(self.model.transaction_type == transaction_type)
         if category:
