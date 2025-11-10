@@ -1,5 +1,7 @@
 from .AbstractBaseDataService import AbstractBaseDataService, ModelType, CreateSchemaType, UpdateSchemaType
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, List, Generic, Type
 from pydantic import BaseModel
 
@@ -11,19 +13,21 @@ class MySQLDataService(AbstractBaseDataService[ModelType, CreateSchemaType, Upda
         """
         self.model = model
 
-    def get(self, db: Session, id_: Any) -> ModelType | None:
+    async def get(self, db: AsyncSession, id_: Any) -> ModelType | None:
         """
         Get a single row by primary key
         """
-        return db.get(self.model, id_)
+        return await db.get(self.model, id_)
 
-    def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[ModelType]:
+    async def get_multi(self, db: AsyncSession, *, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """
         Get pagination rows
         """
-        return db.query(self.model).offset(skip).limit(limit).all()
+        query = select(self.model).offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
+    async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
         """
         Create a new row
         """
@@ -33,13 +37,13 @@ class MySQLDataService(AbstractBaseDataService[ModelType, CreateSchemaType, Upda
         db_obj = self.model(**obj_in_data)
 
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def update(
+    async def update(
             self,
-            db: Session,
+            db: AsyncSession,
             *,
             db_obj: ModelType,
             obj_in: UpdateSchemaType | dict[str, Any]
@@ -54,16 +58,16 @@ class MySQLDataService(AbstractBaseDataService[ModelType, CreateSchemaType, Upda
                 setattr(db_obj, field, value)
 
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def delete(self, db: Session, *, id_: Any) -> ModelType | None:
+    async def delete(self, db: AsyncSession, *, id_: Any) -> ModelType | None:
         """
         Delete a row by primary key
         """
-        obj = db.get(self.model, id_)
+        obj = await db.get(self.model, id_)
         if obj:
-            db.delete(obj)
-            db.commit()
+            await db.delete(obj)
+            await db.commit()
         return obj

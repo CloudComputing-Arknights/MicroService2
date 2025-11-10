@@ -42,9 +42,6 @@ class Item(Base):
     __tablename__ = "items"
 
     item_UUID = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    user_UUID = Column(GUID(), nullable=False)
-    # user_UUID = Column(GUID(), ForeignKey("users.user_UUID"), nullable=False)
-    # owner = relationship("User", back_populates="items")
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     condition = Column(Enum(ConditionType), nullable=False)

@@ -1,6 +1,9 @@
+from os.path import exists
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy import update
+from sqlalchemy.orm import Session
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import uuid
 from datetime import datetime
@@ -14,10 +17,11 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
     def __init__(self):
         super().__init__(model=Item)
 
-    def get_multi_filtered(
+    async def get_multi_filtered(
             self,
-            db: Session,
+            db: AsyncSession,
             *,
+            ids: Optional[List[uuid.UUID]] = None,
             category: Optional[CategoryType] = None,
             transaction_type: Optional[TransactionType] = None,
             skip: int = 0,
@@ -26,30 +30,38 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
         """
         Get filtered and paginated items.
         """
-        query = db.query(self.model)
+        query = select(self.model)
 
+        if ids:
+            query = query.where(self.model.item_UUID.in_(ids))
         if transaction_type:
-            query = query.filter(self.model.transaction_type == transaction_type)
+            query = query.where(self.model.transaction_type == transaction_type)
         if category:
-            query = query.filter(self.model.category.contains(category))
+            query = query.where(self.model.category.contains(category))
         # Apply pagination
-        return query.offset(skip).limit(limit).all()
+        query = query.order_by(self.model.created_at.desc()).offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()
 
-    def get_by_user_id(self, db: Session, *, id_: uuid.UUID) -> List[Item]:
+    async def get_by_user_id(self, db: AsyncSession, *, id_: uuid.UUID) -> List[Item]:
         """
         Get items by user id.
         """
-        return db.query(self.model).filter(self.model.user_UUID == id_).all()
+        query = select(self.model).where(self.model.user_id == id_)
+        result = await db.execute(query)
+        return result.scalars().all()
 
-    def search_by_title(self, db: Session, *, title_keyword: str) -> List[Item]:
+    async def search_by_title(self, db: AsyncSession, *, title_keyword: str) -> List[Item]:
         """
         Search items by title.
         """
-        return db.query(self.model).filter(self.model.title.ilike(f"%{title_keyword}%")).all()
+        query = select(self.model).where(self.model.title.ilike(f"%{title_keyword}%"))
+        result = await db.execute(query)
+        return result.scalars().all()
 
-    def update_with_lock(
+    async def update_with_lock(
             self,
-            db: Session,
+            db: AsyncSession,
             *,
             item_id: uuid.UUID,
             item_update: ItemUpdate,
@@ -70,9 +82,11 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
             .values(**update_data)
         )
 
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         if result.rowcount == 0:
-            exists = db.query(self.model.item_UUID).filter(self.model.item_UUID == item_id).first()
+            exists_query = select(self.model.item_UUID).where(self.model.item_UUID == item_id)
+            exists_result = await db.execute(exists_query)
+            exists = exists_result.scalars().first()
             if not exists:  # Item doesn't exist (404)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -84,9 +98,9 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
                     detail="Resource has been modified by another request. Please refresh and try again."
                 )
 
-        db.commit()
+        await db.commit()
         # Get updated item to get updated_at timestamp
-        updated_item = self.get(db=db, id_=item_id)
+        updated_item = await self.get(db=db, id_=item_id)
         return updated_item
 
 # --- Singleton Pattern ---
