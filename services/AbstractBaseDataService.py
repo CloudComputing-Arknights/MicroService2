@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, List, TypeVar, Generic
 from pydantic import BaseModel
 
@@ -10,19 +12,19 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 class AbstractBaseDataService(ABC, Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     @abstractmethod
-    def get(self, db: Session, id_: Any) -> ModelType | None:
+    async def get(self, db: Session, id_: Any) -> ModelType | None:
         raise NotImplementedError
 
     @abstractmethod
-    def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[ModelType]:
+    async def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[ModelType]:
         raise NotImplementedError
 
     @abstractmethod
-    def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
+    async def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
         raise NotImplementedError
 
     @abstractmethod
-    def update(
+    async def update(
         self, 
         db: Session, 
         *, 
@@ -32,5 +34,5 @@ class AbstractBaseDataService(ABC, Generic[ModelType, CreateSchemaType, UpdateSc
         raise NotImplementedError
 
     @abstractmethod
-    def delete(self, db: Session, *, id_: Any) -> ModelType | None:
+    async def delete(self, db: Session, *, id_: Any) -> ModelType | None:
         raise NotImplementedError

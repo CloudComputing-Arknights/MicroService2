@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from typing import Optional
 
@@ -7,36 +9,38 @@ from models.job import JobStatus
 
 
 class JobDataService:
-    def get_job(self, db: Session, job_id: UUID) -> Optional[Job]:
+    async def get_job(self, db: AsyncSession, job_id: UUID) -> Optional[Job]:
         """get job based on job id"""
-        return db.query(Job).filter(Job.job_UUID == job_id).first()
+        query = select(Job).where(Job.job_UUID == job_id)
+        result = await db.execute(query)
+        return result.scalars().first()
 
-    def create_job(self, db: Session, job_id: UUID) -> Job:
+    async def create_job(self, db: AsyncSession, job_id: UUID) -> Job:
         """Create a new Job record whose initial status is PENDING"""
         db_job = Job(job_UUID=job_id, status=JobStatus.PENDING)
         db.add(db_job)
-        db.commit()
-        db.refresh(db_job)
+        await db.commit()
+        await db.refresh(db_job)
         return db_job
 
-    def update_job_status(
+    async def update_job_status(
             self,
-            db: Session,
+            db: AsyncSession,
             job_id: UUID,
             status: JobStatus,
             result_item_id: Optional[UUID] = None,
             error_message: Optional[str] = None
     ):
         """Update the status of job based on job id"""
-        db_job = self.get_job(db, job_id)
+        db_job = await self.get_job(db, job_id)
         if db_job:
             db_job.status = status
             if result_item_id:
                 db_job.item_UUID = result_item_id
             if error_message:
                 db_job.error_message = error_message
-            db.commit()
-            db.refresh(db_job)
+            await db.commit()
+            await db.refresh(db_job)
         return db_job
 
 
