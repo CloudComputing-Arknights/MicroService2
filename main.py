@@ -8,8 +8,8 @@ where_am_i = os.environ.get("WHERE_AM_I", None)
 
 port = int(os.environ.get("FASTAPIPORT", 8000))
 app = FastAPI(
-    title="Item & Thread API",
-    description="Item and Thread microservice",
+    title="Item API",
+    description="Item microservice",
     version="0.1.0",
 )
 app.include_router(item_resource.router)
