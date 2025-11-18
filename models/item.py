@@ -17,9 +17,6 @@ class ConditionType(str, Enum):
     POOR = "POOR"
 
 
-# class CategoryType(str, Enum):
-#     FURNITURE = "FURNITURE"
-
 # =================================== Category ===================================
 class CategoryBase(BaseModel):
     """Base model for a Category."""
@@ -48,7 +45,7 @@ class CategoryBase(BaseModel):
 
 class CategoryRead(CategoryBase):
     """Representation of a Category returned from the server."""
-    id: UUID = Field(
+    category_UUID: UUID = Field(
         ...,
         description="Server-generated category ID"
     )
@@ -57,7 +54,7 @@ class CategoryRead(CategoryBase):
         "json_schema_extra": {
             "examples": [
                 {
-                    "id": "11111111-1111-4111-8111-000000000001",
+                    "category_UUID": "11111111-1111-4111-8111-000000000001",
                     "name": "FURNITURE",
                     "description": "Items for your home"
                 }
@@ -125,7 +122,7 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     """Creation payload for an item and its post."""
-    category_ids: Optional[List[UUID]] = Field(
+    category_UUIDs: Optional[List[UUID]] = Field(
         default_factory=list,
         description="List of Category IDs to associate with this item."
     )
@@ -145,9 +142,8 @@ class ItemCreate(ItemBase):
                     "image_urls": [
                         "https://example.com/image1.jpg",
                     ],
-                    "category_ids": [
-                        "11111111-1111-4111-8111-000000000001",
-                        "11111111-1111-4111-8111-000000000002"
+                    "category_UUIDs": [
+                        "e5ead3a7-9cc6-4e22-adca-1add6dcedada",
                     ]
                 }
             ]
@@ -173,7 +169,7 @@ class ItemUpdate(BaseModel):
     #     None,
     #     description="Category of the posted item."
     # )
-    category_ids: Optional[List[UUID]] = Field(
+    category_UUIDs: Optional[List[UUID]] = Field(
         None,
         description="A new list of Category IDs to associate with this item. (Replaces the old list)"
     )
@@ -239,7 +235,7 @@ class ItemRead(ItemBase):
                     "updated_at": "2025-02-21T13:00:00Z",
                     "categories": [
                         {
-                            "id": "11111111-1111-4111-8111-000000000001",
+                            "category_UUID": "11111111-1111-4111-8111-000000000001",
                             "name": "FURNITURE",
                             "description": "Items for your home"
                         }

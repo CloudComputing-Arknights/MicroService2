@@ -40,8 +40,8 @@ class GUID(TypeDecorator):
 item_category_link = Table(
     'item_category_link',
     Base.metadata,
-    Column('item_id', GUID(), ForeignKey('items.item_UUID'), primary_key=True),
-    Column('category_id', GUID(), ForeignKey('categories.id'), primary_key=True)
+    Column('item_UUID', GUID(), ForeignKey('items.item_UUID'), primary_key=True),
+    Column('category_UUID', GUID(), ForeignKey('categories.category_UUID'), primary_key=True)
 )
 
 
@@ -49,7 +49,7 @@ item_category_link = Table(
 class Category(Base):
     __tablename__ = "categories"
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    category_UUID = Column(GUID(), primary_key=True, default=uuid.uuid4)
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
 
