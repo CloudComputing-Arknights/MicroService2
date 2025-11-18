@@ -42,4 +42,4 @@ class Job(Base):
 
     # UUID of the created item
     item_UUID = Column(GUID(), nullable=True)
-    error_message = Column(String, nullable=True)
+    error_message = Column(String(255), nullable=True)

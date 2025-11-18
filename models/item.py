@@ -17,10 +17,55 @@ class ConditionType(str, Enum):
     POOR = "POOR"
 
 
-class CategoryType(str, Enum):
-    FURNITURE = "FURNITURE"
+# class CategoryType(str, Enum):
+#     FURNITURE = "FURNITURE"
+
+# =================================== Category ===================================
+class CategoryBase(BaseModel):
+    """Base model for a Category."""
+    name: str = Field(
+        ...,
+        description="Name of the category",
+        min_length=1,
+        max_length=100
+    )
+    description: Optional[str] = Field(
+        None,
+        description="Optional description for the category."
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "name": "FURNITURE",
+                    "description": "Items for your home"
+                }
+            ]
+        }
+    }
 
 
+class CategoryRead(CategoryBase):
+    """Representation of a Category returned from the server."""
+    id: UUID = Field(
+        ...,
+        description="Server-generated category ID"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "id": "11111111-1111-4111-8111-000000000001",
+                    "name": "FURNITURE",
+                    "description": "Items for your home"
+                }
+            ]
+        }
+    }
+
+# =================================== Item ===================================
 class ItemBase(BaseModel):
     title: str = Field(
         ...,
@@ -34,10 +79,10 @@ class ItemBase(BaseModel):
         ...,
         description="Condition of the item (ConditionType)"
     )
-    category: Optional[List[CategoryType]] = Field(
-        None,
-        description="Category of the posted item."
-    )
+    # category: Optional[List[CategoryType]] = Field(
+    #     None,
+    #     description="Category of the posted item."
+    # )
     transaction_type: TransactionType = Field(
         ...,
         description="Type of the transaction, can be SALE or RENT."
@@ -63,14 +108,14 @@ class ItemBase(BaseModel):
                     "title": "Sofa",
                     "description": "Brown sofa.",
                     "condition": "LIKE_NEW",
-                    "category": [
-                        "FURNITURE",
-                    ],
+                    # "category": [
+                    #     "FURNITURE",
+                    # ],
                     "transaction_type": "SALE",
                     "price": 200.00,
                     "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
-                        "http://example.com/image1.jpg",
+                        "https://example.com/image1.jpg",
                     ]
                 }
             ]
@@ -80,6 +125,10 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     """Creation payload for an item and its post."""
+    category_ids: Optional[List[UUID]] = Field(
+        default_factory=list,
+        description="List of Category IDs to associate with this item."
+    )
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -87,14 +136,18 @@ class ItemCreate(ItemBase):
                     "title": "Sofa",
                     "description": "Brown sofa.",
                     "condition": "LIKE_NEW",
-                    "category": [
-                        "FURNITURE",
-                    ],
+                    # "category": [
+                    #     "FURNITURE",
+                    # ],
                     "transaction_type": "SALE",
                     "price": 200.00,
                     "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
-                        "http://example.com/image1.jpg",
+                        "https://example.com/image1.jpg",
+                    ],
+                    "category_ids": [
+                        "11111111-1111-4111-8111-000000000001",
+                        "11111111-1111-4111-8111-000000000002"
                     ]
                 }
             ]
@@ -116,9 +169,13 @@ class ItemUpdate(BaseModel):
         None,
         description="Condition of the item (ConditionType)"
     )
-    category: Optional[List[CategoryType]] = Field(
+    # category: Optional[List[CategoryType]] = Field(
+    #     None,
+    #     description="Category of the posted item."
+    # )
+    category_ids: Optional[List[UUID]] = Field(
         None,
-        description="Category of the posted item."
+        description="A new list of Category IDs to associate with this item. (Replaces the old list)"
     )
     transaction_type: Optional[TransactionType] = Field(
         None,
@@ -146,6 +203,10 @@ class ItemRead(ItemBase):
         description="Server-generated item ID",
         json_schema_extra={"example": "99999999-9999-4999-8999-999999999999"},
     )
+    categories: List[CategoryRead] = Field(
+        default_factory=list,
+        description="Categories associated with the item."
+    )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         description="Creation timestamp (UTC).",
@@ -164,18 +225,25 @@ class ItemRead(ItemBase):
                     "title": "sofa",
                     "description": "Brown sofa",
                     "condition": "LIKE_NEW",
-                    "category": [
-                        "FURNITURE",
-                    ],
+                    # "category": [
+                    #     "FURNITURE",
+                    # ],
                     "transaction_type": "SALE",
                     "price": 200.00,
                     "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
-                        "http://example.com/image1.jpg",
+                        "https://example.com/image1.jpg",
                     ],
                     "item_UUID": "99999999-9999-4999-8999-999999999999",
                     "created_at": "2025-02-20T11:22:33Z",
                     "updated_at": "2025-02-21T13:00:00Z",
+                    "categories": [
+                        {
+                            "id": "11111111-1111-4111-8111-000000000001",
+                            "name": "FURNITURE",
+                            "description": "Items for your home"
+                        }
+                    ]
                 }
             ]
         }

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, Header, BackgroundTasks
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID, uuid4
 from typing import List, Optional
@@ -8,7 +7,7 @@ from datetime import datetime
 from framework.database import get_db, SessionLocal, AsyncSessionLocal
 from services.ItemDataService import get_item_service, ItemDataService
 from services.JobDataService import get_job_service, JobDataService
-from models.item import ItemCreate, ItemUpdate, ItemRead, CategoryType, TransactionType
+from models.item import ItemCreate, ItemUpdate, ItemRead, TransactionType
 from models.job import JobRead, JobStatus
 
 
@@ -37,7 +36,7 @@ async def run_item_creation_task(
                 status=JobStatus.COMPLETED,
                 result_item_id=new_item.item_UUID
             )
-            print("!!!", new_item.item_UUID)
+            # print("!!!", new_item.item_UUID)
 
         except Exception as e:
             print(f"Task {job_id} failed: {e}")
@@ -110,7 +109,7 @@ async def get_job_status(
 @router.get("/", response_model=List[ItemRead])
 async def list_items(
         ids: Optional[List[UUID]] = Query(None, description="Filter by a list of item IDs", alias="id"),
-        category: Optional[CategoryType] = Query(None, description="Filter by item's category"),
+        category_id: Optional[UUID] = Query(None, description="Filter by item's category id"),
         transaction_type: Optional[TransactionType] = Query(None, description="Filter by item's transaction type"),
         skip: int = 0,
         limit: int = 10,
@@ -123,7 +122,7 @@ async def list_items(
     items = await item_service.get_multi_filtered(
         db=db,
         ids=ids,
-        category=category,
+        category_id=category_id,
         transaction_type=transaction_type,
         skip=skip,
         limit=limit
