@@ -111,6 +111,7 @@ async def list_items(
         ids: Optional[List[UUID]] = Query(None, description="Filter by a list of item IDs", alias="id"),
         category_id: Optional[UUID] = Query(None, description="Filter by item's category id"),
         transaction_type: Optional[TransactionType] = Query(None, description="Filter by item's transaction type"),
+        title_search: Optional[str] = Query(None, description="Search by item title (case-insensitive, partial match)", alias="search"),
         skip: int = 0,
         limit: int = 10,
         db: AsyncSession = Depends(get_db),
@@ -124,6 +125,7 @@ async def list_items(
         ids=ids,
         category_id=category_id,
         transaction_type=transaction_type,
+        title_search=title_search,
         skip=skip,
         limit=limit
     )

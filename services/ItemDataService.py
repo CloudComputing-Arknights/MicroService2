@@ -52,6 +52,7 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
             ids: Optional[List[uuid.UUID]] = None,
             category_id: Optional[List[uuid.UUID]] = None,
             transaction_type: Optional[TransactionType] = None,
+            title_search: Optional[str] = None,
             skip: int = 0,
             limit: int = 100
     ) -> List[Item]:
@@ -66,6 +67,8 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
             query = query.where(self.model.transaction_type == transaction_type)
         if category_id:
             query = query.where(self.model.categories.any(Category.id == category_id))
+        if title_search:
+            query = query.where(self.model.title.ilike(f"%{title_search}%"))
         # Apply pagination
         query = query.order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(query)
