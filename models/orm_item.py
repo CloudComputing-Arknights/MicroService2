@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, DateTime, Enum, ForeignKey, JSON, Text
+from sqlalchemy import Column, String, Float, DateTime, Enum, Table, JSON, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.types import TypeDecorator, CHAR
@@ -36,8 +36,31 @@ class GUID(TypeDecorator):
             value = uuid.UUID(value)
         return value
 
+# ===================================== Item-Category Table =====================================
+item_category_link = Table(
+    'item_category_link',
+    Base.metadata,
+    Column('item_UUID', GUID(), ForeignKey('items.item_UUID'), primary_key=True),
+    Column('category_UUID', GUID(), ForeignKey('categories.category_UUID'), primary_key=True)
+)
 
-# ----- Item Model -----
+
+# ===================================== Category Model =====================================
+class Category(Base):
+    __tablename__ = "categories"
+
+    category_UUID = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+
+    items = relationship(
+        "Item",
+        secondary=item_category_link,
+        back_populates="categories"
+    )
+
+
+# ===================================== Item Model =====================================
 class Item(Base):
     __tablename__ = "items"
 
@@ -48,7 +71,14 @@ class Item(Base):
     transaction_type = Column(Enum(TransactionType), nullable=False)
     price = Column(Float, nullable=False)
     address_UUID = Column(GUID(), nullable=True)
-    category = Column(JSON, nullable=True)
+    # category = Column(JSON, nullable=True)
     image_urls = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    categories = relationship(
+        "Category",
+        secondary=item_category_link,
+        back_populates="items",
+        lazy="selectin"
+    )
