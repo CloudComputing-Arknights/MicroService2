@@ -109,7 +109,7 @@ async def get_job_status(
 @router.get("/", response_model=List[ItemRead])
 async def list_items(
         ids: Optional[List[UUID]] = Query(None, description="Filter by a list of item IDs", alias="id"),
-        category_id: Optional[UUID] = Query(None, description="Filter by item's category id"),
+        category_id: Optional[int] = Query(None, description="Filter by item's category id"),
         transaction_type: Optional[TransactionType] = Query(None, description="Filter by item's transaction type"),
         title_search: Optional[str] = Query(None, description="Search by item title (case-insensitive, partial match)", alias="search"),
         skip: int = 0,

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Float, DateTime, Enum, Table, JSON, Text, ForeignKey
+from sqlalchemy import Column, String, Float, Integer, DateTime, Enum, Table, JSON, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.types import TypeDecorator, CHAR
@@ -41,7 +41,7 @@ item_category_link = Table(
     'item_category_link',
     Base.metadata,
     Column('item_UUID', GUID(), ForeignKey('items.item_UUID'), primary_key=True),
-    Column('category_UUID', GUID(), ForeignKey('categories.category_UUID'), primary_key=True)
+    Column('category_id', Integer, ForeignKey('categories.category_id'), primary_key=True)
 )
 
 
@@ -49,7 +49,7 @@ item_category_link = Table(
 class Category(Base):
     __tablename__ = "categories"
 
-    category_UUID = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    category_id = Column(Integer, primary_key=True, default=int)
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
 
