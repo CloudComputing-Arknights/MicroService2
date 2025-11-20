@@ -25,12 +25,12 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
         **kwargs
     ) -> Item:
         create_data = obj_in.model_dump()
-        category_ids = create_data.pop("category_UUIDs", [])  # eject category ids from payload
+        category_ids = create_data.pop("category_ids", [])  # eject category ids from payload
 
         db_obj = self.model(**create_data)  # Create item po without category ids
 
         if category_ids:
-            category_query = select(Category).where(Category.category_UUID.in_(category_ids))
+            category_query = select(Category).where(Category.category_id.in_(category_ids))
             category_result = await db.execute(category_query)
             categories_to_link = category_result.scalars().all()
             db_obj.categories = categories_to_link  # Handle item_category_link table during commit
@@ -66,21 +66,13 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
         if transaction_type:
             query = query.where(self.model.transaction_type == transaction_type)
         if category_id:
-            query = query.where(self.model.categories.any(Category.category_UUID == category_id))
+            query = query.where(self.model.categories.any(Category.category_id == category_id))
         if title_search:
             query = query.where(self.model.title.ilike(f"%{title_search}%"))
         # Apply pagination
         query = query.order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(query)
         return result.scalars().unique().all()
-
-    # async def get_by_user_id(self, db: AsyncSession, *, id_: uuid.UUID) -> List[Item]:
-    #     """
-    #     Get items by user id.
-    #     """
-    #     query = select(self.model).where(self.model.user_id == id_)
-    #     result = await db.execute(query)
-    #     return result.scalars().all()
 
     async def search_by_title(self, db: AsyncSession, *, title_keyword: str) -> List[Item]:
         """
@@ -89,50 +81,6 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
         query = select(self.model).where(self.model.title.ilike(f"%{title_keyword}%"))
         result = await db.execute(query)
         return result.scalars().all()
-
-    # async def update_with_lock(
-    #         self,
-    #         db: AsyncSession,
-    #         *,
-    #         item_id: uuid.UUID,
-    #         item_update: ItemUpdate,
-    #         expected_updated_at: datetime
-    # ) -> Item:
-    #     """
-    #     Update an item based on updated_at.
-    #     """
-    #     update_data = item_update.model_dump(exclude_unset=True)
-    #
-    #     # Check item_UUID and updated_at
-    #     stmt = (
-    #         update(self.model)
-    #         .where(
-    #             self.model.item_UUID == item_id,
-    #             self.model.updated_at == expected_updated_at
-    #         )
-    #         .values(**update_data)
-    #     )
-    #
-    #     result = await db.execute(stmt)
-    #     if result.rowcount == 0:
-    #         exists_query = select(self.model.item_UUID).where(self.model.item_UUID == item_id)
-    #         exists_result = await db.execute(exists_query)
-    #         exists = exists_result.scalars().first()
-    #         if not exists:  # Item doesn't exist (404)
-    #             raise HTTPException(
-    #                 status_code=status.HTTP_404_NOT_FOUND,
-    #                 detail="Item not found"
-    #             )
-    #         else:   # Item exists but doesn't match updated_at (412)
-    #             raise HTTPException(
-    #                 status_code=status.HTTP_412_PRECONDITION_FAILED,
-    #                 detail="Resource has been modified by another request. Please refresh and try again."
-    #             )
-    #
-    #     await db.commit()
-    #     # Get updated item to get updated_at timestamp
-    #     updated_item = await self.get(db=db, id_=item_id)
-    #     return updated_item
 
     async def update_with_lock(
             self,
@@ -175,20 +123,20 @@ class ItemDataService(MySQLDataService[Item, ItemCreate, ItemUpdate]):
         # Exclude 'category_UUIDs' as it's a relation instead of columns
         update_data = item_update.model_dump(
             exclude_unset=True,
-            exclude={"category_UUIDs"}
+            exclude={"category_ids"}
         )
         for key, value in update_data.items():
             setattr(db_obj, key, value)
 
         # Update category
-        if "category_UUIDs" in item_update.model_fields_set:
-            new_category_ids = item_update.category_UUIDs
+        if "category_ids" in item_update.model_fields_set:
+            new_category_ids = item_update.category_ids
 
             if not new_category_ids:
                 db_obj.categories.clear()
             else:
                 category_query = select(Category).where(
-                    Category.category_UUID
+                    Category.category_id
                     .in_(new_category_ids)
                 )
                 category_result = await db.execute(category_query)

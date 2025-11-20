@@ -2,6 +2,7 @@ from typing import Optional, List, Annotated
 from uuid import UUID, uuid4
 from datetime import datetime
 from pydantic import Field, BaseModel
+from decimal import Decimal
 from enum import Enum
 
 
@@ -45,16 +46,16 @@ class CategoryBase(BaseModel):
 
 class CategoryRead(CategoryBase):
     """Representation of a Category returned from the server."""
-    category_UUID: UUID = Field(
+    category_id: int = Field(
         ...,
-        description="Server-generated category ID"
+        description="Unique integer ID for the category"
     )
 
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "category_UUID": "11111111-1111-4111-8111-000000000001",
+                    "category_id": 1,
                     "name": "FURNITURE",
                     "description": "Items for your home"
                 }
@@ -69,28 +70,29 @@ class ItemBase(BaseModel):
         description="Title of the post of the item"
     )
     description: Optional[str] = Field(
-        None,
+        default=None,
         description="Description of the item in the post."
     )
     condition: ConditionType = Field(
         ...,
         description="Condition of the item (ConditionType)"
     )
-    # category: Optional[List[CategoryType]] = Field(
-    #     None,
-    #     description="Category of the posted item."
-    # )
     transaction_type: TransactionType = Field(
         ...,
         description="Type of the transaction, can be SALE or RENT."
     )
-    price: float = Field(
-        ...,
-        ge=0,
-        description="Price of the item must be greater than 0."
-    )
+    price: float = Annotated[
+        Decimal,
+        Field(
+            ...,
+            ge=0,
+            max_digits=10,
+            decimal_places=2,
+            description="Price with <= 2 decimal places"
+        )
+    ]
     address_UUID: Optional[UUID] = Field(
-        None,
+        default_factory=list,
         description="The UUID of position for transaction chosen from user's address lists, can be online or a physical place, "
     )
     image_urls: List[str] = Field(
@@ -105,9 +107,6 @@ class ItemBase(BaseModel):
                     "title": "Sofa",
                     "description": "Brown sofa.",
                     "condition": "LIKE_NEW",
-                    # "category": [
-                    #     "FURNITURE",
-                    # ],
                     "transaction_type": "SALE",
                     "price": 200.00,
                     "address_UUID": "99999999-9999-4999-8999-000000000001",
@@ -122,7 +121,7 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     """Creation payload for an item and its post."""
-    category_UUIDs: Optional[List[UUID]] = Field(
+    category_ids: Optional[List[int]] = Field(
         default_factory=list,
         description="List of Category IDs to associate with this item."
     )
@@ -133,17 +132,14 @@ class ItemCreate(ItemBase):
                     "title": "Sofa",
                     "description": "Brown sofa.",
                     "condition": "LIKE_NEW",
-                    # "category": [
-                    #     "FURNITURE",
-                    # ],
                     "transaction_type": "SALE",
                     "price": 200.00,
                     "address_UUID": "99999999-9999-4999-8999-000000000001",
                     "image_urls": [
                         "https://example.com/image1.jpg",
                     ],
-                    "category_UUIDs": [
-                        "e5ead3a7-9cc6-4e22-adca-1add6dcedada",
+                    "category_ids": [
+                        1,
                     ]
                 }
             ]
@@ -165,11 +161,7 @@ class ItemUpdate(BaseModel):
         None,
         description="Condition of the item (ConditionType)"
     )
-    # category: Optional[List[CategoryType]] = Field(
-    #     None,
-    #     description="Category of the posted item."
-    # )
-    category_UUIDs: Optional[List[UUID]] = Field(
+    category_ids: Optional[List[int]] = Field(
         None,
         description="A new list of Category IDs to associate with this item. (Replaces the old list)"
     )
@@ -177,17 +169,22 @@ class ItemUpdate(BaseModel):
         None,
         description="Type of the transaction can be SALE or RENT."
     )
-    price: Optional[float] = Field(
-        None,
-        ge=0,
-        description="Price of the item must be greater than 0."
-    )
+    price: float = Annotated[
+        Decimal,
+        Field(
+            None,
+            ge=0,
+            max_digits=10,
+            decimal_places=2,
+            description="Price with <= 2 decimal places"
+        )
+    ]
     address_UUID: Optional[UUID] = Field(
         None,
         description="The position for transaction, can be online or a physical place."
     )
     image_urls: Optional[List[str]] = Field(
-        default_factory=list,
+        None,
         description="The list of URL images of the post"
     )
 
@@ -221,9 +218,6 @@ class ItemRead(ItemBase):
                     "title": "sofa",
                     "description": "Brown sofa",
                     "condition": "LIKE_NEW",
-                    # "category": [
-                    #     "FURNITURE",
-                    # ],
                     "transaction_type": "SALE",
                     "price": 200.00,
                     "address_UUID": "99999999-9999-4999-8999-000000000001",
@@ -235,7 +229,7 @@ class ItemRead(ItemBase):
                     "updated_at": "2025-02-21T13:00:00Z",
                     "categories": [
                         {
-                            "category_UUID": "11111111-1111-4111-8111-000000000001",
+                            "category_id": 1,
                             "name": "FURNITURE",
                             "description": "Items for your home"
                         }
