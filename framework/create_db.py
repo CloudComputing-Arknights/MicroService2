@@ -14,7 +14,17 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("Tables created successfully.")
-    await engine.dispose()
+    # await engine.dispose()
+
+async def create_db():
+    await init_db()
+
+async def close_db_connection():
+    """Close database connection and dispose engine"""
+    global engine
+    if engine:
+        await engine.dispose()
+        engine = None
 
 if __name__ == "__main__":
     asyncio.run(init_db())
