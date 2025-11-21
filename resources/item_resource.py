@@ -7,7 +7,8 @@ from datetime import datetime
 from framework.database import get_db, SessionLocal, AsyncSessionLocal
 from services.ItemDataService import get_item_service, ItemDataService
 from services.JobDataService import get_job_service, JobDataService
-from models.item import ItemCreate, ItemUpdate, ItemRead, TransactionType
+from services.CategoryDataService import get_category_service, CategoryDataService
+from models.item import ItemCreate, ItemUpdate, ItemRead, TransactionType, CategoryRead
 from models.job import JobRead, JobStatus
 
 
@@ -104,6 +105,26 @@ async def get_job_status(
         response.headers["Location"] = item_url
 
     return job
+
+
+# ======================================== Category Endpoint ========================================
+@ router.get("/categories", response_model=List[CategoryRead])
+async def list_categories(
+        skip: int = 0,
+        limit: int = 10,
+        db: AsyncSession = Depends(get_db),
+        category_service: CategoryDataService = Depends(get_category_service)
+) -> List[CategoryRead]:
+    """
+    Get a list of all categories.
+    """
+    categories = await category_service.get_categories(
+        db=db,
+        skip=skip,
+        limit=limit
+    )
+    return categories
+
 
 # ======================================== Item Endpoint ========================================
 @router.get("/", response_model=List[ItemRead])
