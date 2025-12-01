@@ -5,6 +5,9 @@ from contextlib import asynccontextmanager
 
 from resources import item_resource
 from framework.create_db import create_db, close_db_connection
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 where_am_i = os.environ.get("WHERE_AM_I", None)
 
