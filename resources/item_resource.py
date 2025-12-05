@@ -3,6 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID, uuid4
 from typing import List, Optional
 from datetime import datetime
+import logging
+import json
+import os
+from google.cloud import pubsub_v1
 
 from framework.database import get_db, SessionLocal, AsyncSessionLocal
 from services.ItemDataService import get_item_service, ItemDataService
@@ -11,10 +15,12 @@ from services.CategoryDataService import get_category_service, CategoryDataServi
 from models.item import ItemCreate, ItemUpdate, ItemRead, TransactionType, CategoryRead
 from models.job import JobRead, JobStatus
 
+logger = logging.getLogger(__name__)
 
 async def run_item_creation_task(
         job_id: UUID,
         item_in_dict: dict,
+        user_id: str = None
 ):
     """Create an item asynchronously"""
     async with AsyncSessionLocal() as db:
@@ -37,7 +43,32 @@ async def run_item_creation_task(
                 status=JobStatus.COMPLETED,
                 result_item_id=new_item.item_UUID
             )
-            # print("!!!", new_item.item_UUID)
+
+            # GCP - Pub
+            if user_id:
+                try:
+                    project_id = os.getenv("GCP_PROJECT_ID")
+                    topic_id = os.getenv("GCP_TOPIC_ID")
+
+                    publisher = pubsub_v1.PublisherClient()
+                    topic_path = publisher.topic_path(project_id, topic_id)
+
+                    message_data = {
+                        "event": "ITEM_CREATED",
+                        "status": "COMPLETED",
+                        "item_id": str(new_item.item_UUID),
+                        "user_id": user_id,
+                        "job_id": str(job_id)
+                    }
+                    message_json = json.dumps(message_data).encode("utf-8")
+
+                    # publish
+                    future = publisher.publish(topic_path, message_json)
+                    message_id = future.result()
+                    logger.info(f"Pub/Sub message published. ID: {message_id}")
+
+                except Exception as pubsub_error:
+                    logger.error(f"Failed to send Pub/Sub notification: {pubsub_error}")
 
         except Exception as e:
             print(f"Task {job_id} failed: {e}")
@@ -60,7 +91,8 @@ async def create_item(
         response: Response,
         background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db),
-        job_service: JobDataService = Depends(get_job_service)
+        job_service: JobDataService = Depends(get_job_service),
+        x_user_id: str = Header(None, alias="X-User_Id"),
 ) -> JobRead:
     """
     Accept the request of creating a new item, return 202 and start a job to create it asynchronously.
@@ -73,6 +105,7 @@ async def create_item(
         run_item_creation_task,
         job_id=job_id,
         item_in_dict=item_in.model_dump(),
+        user_id=x_user_id
     )
 
     # Set Location in Header for client to check status of the job
